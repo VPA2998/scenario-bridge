@@ -12,7 +12,7 @@ Please include:
 ## Making a change
 
 1. Fork and clone the repo.
-2. Edit `index.html` directly — it's a single self-contained file (HTML, CSS,
+2. Edit `ScenarioBridge.html` directly — it's a single self-contained file (HTML, CSS,
    and JS inline), intentionally with no build step.
 3. Run the test suite before opening a PR:
 

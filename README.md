@@ -12,13 +12,13 @@ ScenarioBridge is a single self-contained HTML file that loads a local
 readable, OSI-style ground-truth frames you can inspect, play back, and
 export. Nothing is uploaded anywhere; everything runs locally in the page.
 
-![Animated playback on a curved road, resolved from a loaded OpenDRIVE file](docs/screenshots/playback.png)
+![Overview tab summarizing a loaded scenario — file header, parameters, road network, entities, and events](docs/screenshots/overview.png)
 
 ## Quick start
 
 No install, no build step:
 
-1. Download [`index.html`](index.html) (or clone this repo).
+1. Download [`ScenarioBridge.html`](ScenarioBridge.html) (or clone this repo).
 2. Open it in any modern browser.
 3. Load a `.xosc` file, optionally load a matching `.xodr`, set a duration
    and sampling rate, and click **Generate frames**.
@@ -51,8 +51,6 @@ download needed.
   as strings, per protobuf's standard JSON mapping — opened in a new window
   with its own preview and download button.
 
-![Source → OSI table, rebuilt from the currently loaded files](docs/screenshots/sources.png)
-
 ## What it deliberately doesn't do
 
 This is a lightweight inspection/demo tool, not a simulator or a full OSI
@@ -72,7 +70,16 @@ The in-app "OSC → OSI mapping" tab has the full, current list of what's
 implemented vs. reference-only, including the exact OSI field/enum values
 used.
 
-![OSC → OSI concept and field reference](docs/screenshots/mapping.png)
+## Screenshots
+
+|  |  |
+|---|---|
+| **Overview** — file header, parameters, road network, entities, events | **OSC → OSI mapping** — concept and field reference |
+| ![Overview tab](docs/screenshots/overview.png) | ![OSC to OSI mapping tab](docs/screenshots/osc-osi-mapping.png) |
+| **Source → OSI table** — audit trail from the currently loaded files | **Playback** — animated top-down view resolved onto the road geometry |
+| ![Source to OSI table tab](docs/screenshots/source-osi-table.png) | ![Playback tab](docs/screenshots/playback.png) |
+| **Raw data** — generated OSI-style JSON preview | **Real OSI structure** — converted to actual `osi3.GroundTruth` shape |
+| ![Raw data tab](docs/screenshots/raw-data.png) | ![Real OSI structure window](docs/screenshots/real-osi-structure.png) |
 
 ## Running the tests
 
@@ -97,7 +104,7 @@ Manual testing and the screenshots in this README use sample scenarios from
 ## Live demo
 
 Live at **[vpa2998.github.io/scenario-bridge](https://vpa2998.github.io/scenario-bridge/)**,
-served straight from `index.html` at the repo root via GitHub Pages —
+served straight from `ScenarioBridge.html` at the repo root via GitHub Pages —
 no build step. Forking this repo and enabling Pages (**Settings → Pages** →
 deploy from branch `main`, folder `/ (root)`) gets you the same at
 `https://<your-username>.github.io/scenario-bridge/`.
@@ -105,7 +112,8 @@ deploy from branch `main`, folder `/ (root)`) gets you the same at
 ## Project layout
 
 ```
-index.html                   the app — single file, no build step
+ScenarioBridge.html          the app — single file, no build step
+index.html                   redirects to ScenarioBridge.html (for GitHub Pages)
 test-fixtures/                sample .xosc / .xodr files used by the tests
 tests/                        Playwright smoke tests
 docs/screenshots/              images used in this README

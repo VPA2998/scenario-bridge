@@ -1,4 +1,4 @@
-// End-to-end smoke tests for index.html.
+// End-to-end smoke tests for ScenarioBridge.html.
 //
 // These load the app straight off disk (file://) — there's no build step and
 // no server, matching how anyone actually uses this tool. Each test also
@@ -9,7 +9,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
-const APP_PATH = 'file://' + path.join(__dirname, '..', 'index.html');
+const APP_PATH = 'file://' + path.join(__dirname, '..', 'ScenarioBridge.html');
 const FIXTURES = path.join(__dirname, '..', 'test-fixtures');
 
 async function trackConsoleErrors(page) {

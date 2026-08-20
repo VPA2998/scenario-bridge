@@ -1,5 +1,9 @@
 # ScenarioBridge
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/VPA2998/scenario-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/VPA2998/scenario-bridge/actions/workflows/ci.yml)
+[![Made by VPA2998](https://img.shields.io/badge/made%20by-VPA2998-informational)](https://github.com/VPA2998)
+
 **OpenSCENARIO + OpenDRIVE → OSI-style ground truth, entirely in your browser.**
 
 ScenarioBridge is a single self-contained HTML file that loads a local
@@ -111,6 +115,10 @@ docs/screenshots/              images used in this README
 ## Contributing
 
 Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Author
+
+Built by [VPA2998](https://github.com/VPA2998).
 
 ## License
 

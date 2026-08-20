@@ -12,7 +12,7 @@ ScenarioBridge is a single self-contained HTML file that loads a local
 readable, OSI-style ground-truth frames you can inspect, play back, and
 export. Nothing is uploaded anywhere; everything runs locally in the page.
 
-![Overview tab summarizing a loaded scenario — file header, parameters, road network, entities, and events](docs/screenshots/overview.png)
+![Loading a scenario, generating frames, and animated playback](docs/screenshots/demo.gif)
 
 ## Quick start
 

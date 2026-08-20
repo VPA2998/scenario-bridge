@@ -1,0 +1,1899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScenarioBridge — OpenSCENARIO + OpenDRIVE → OSI</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --surface-2: #f3f2ee;
+    --text: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --border: rgba(11,11,11,0.10);
+    --border-strong: rgba(11,11,11,0.18);
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --accent: #2a78d6;
+    --accent-hover: #1c5cab;
+    --accent-soft: #eaf2fc;
+    --good: #0ca30c;
+    --good-soft: #e9f8e9;
+    --critical: #d03b3b;
+    --critical-soft: #fdecec;
+    --warning: #b3720a;
+    --warning-soft: #fdf3df;
+    --cat-car: #2a78d6;
+    --cat-truck: #eb6834;
+    --cat-ped: #1baf7a;
+    --cat-bike: #eda100;
+    --cat-misc: #4a3aa7;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 2px rgba(11,11,11,.05), 0 1px 3px rgba(11,11,11,.06);
+    --shadow-md: 0 6px 16px rgba(11,11,11,.08), 0 1px 3px rgba(11,11,11,.08);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--page); color: var(--text); -webkit-font-smoothing: antialiased; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  h1, h2, h3, h4 { font-weight: 650; letter-spacing: -0.01em; }
+  p { color: var(--text-secondary); margin: 4px 0; line-height: 1.5; }
+
+  /* ---------- header ---------- */
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 14px 22px; background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 38px; height: 38px; border-radius: 10px; background: var(--accent-soft);
+    display: flex; align-items: center; justify-content: center; color: var(--accent); flex: none;
+  }
+  .brand h1 { font-size: 17px; margin: 0; }
+  .brand p { font-size: 12.5px; margin: 1px 0 0; color: var(--text-muted); }
+  .steps { display: flex; align-items: center; gap: 4px; }
+  .step {
+    display: flex; align-items: center; gap: 7px; padding: 6px 12px 6px 8px; border-radius: 999px;
+    font-size: 12.5px; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .step .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--border-strong); flex: none; display:flex; align-items:center; justify-content:center; }
+  .step.active { color: var(--text); background: var(--accent-soft); border-color: transparent; }
+  .step.active .dot { background: var(--accent); }
+  .step.done { color: var(--text); }
+  .step.done .dot { background: var(--good); }
+  .step-connector { width: 14px; height: 1px; background: var(--border-strong); }
+  @media (max-width: 980px) { .steps { display: none; } }
+
+  /* ---------- layout ---------- */
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; padding: 18px 22px 40px; max-width: 1440px; margin: 0 auto; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+  .card h3 { margin: 0 0 3px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .card > .card-desc { font-size: 12.5px; margin: 0 0 12px; }
+  .card-step { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700; flex: none; }
+
+  /* ---------- dropzone ---------- */
+  .dropzone {
+    border: 1.5px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 22px 14px; text-align: center;
+    background: var(--surface-2); cursor: pointer; user-select: none; transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone input { display: none; }
+  .dropzone .upload-icon { color: var(--accent); margin-bottom: 6px; }
+  .dropzone strong { font-size: 13.5px; }
+  .small, .hint { font-size: 12px; color: var(--text-muted); }
+
+  /* ---------- buttons / inputs ---------- */
+  button, input, select { font: inherit; }
+  .btn {
+    cursor: pointer; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface);
+    color: var(--text); padding: 8px 12px; margin: 4px 6px 0 0; font-size: 13px; font-weight: 550;
+    display: inline-flex; align-items: center; gap: 6px; transition: background .12s, border-color .12s, opacity .12s;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.ghost { background: transparent; border-color: transparent; padding: 6px 8px; }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn.small { padding: 5px 9px; font-size: 12px; }
+  .btn.icon-only { padding: 8px; }
+  label { display: block; margin: 10px 0 4px; color: var(--text-secondary); font-size: 12.5px; font-weight: 550; }
+  input[type=number] { width: 100%; padding: 8px 9px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); }
+  input[type=number]:focus, select:focus, .dropzone:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  select { padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ---------- status chip ---------- */
+  .status-chip { margin-top: 12px; padding: 9px 10px; border-radius: 8px; background: var(--surface-2); font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .status-chip .msg { flex: 1; }
+  .status-chip.ok { background: var(--good-soft); color: #0a5c0a; }
+  .status-chip.error { background: var(--critical-soft); color: #8c1f1f; }
+
+  /* ---------- structure tree ---------- */
+  .tree { max-height: 280px; overflow: auto; font-size: 11.5px; color: var(--text-secondary); white-space: pre; background: var(--surface-2); border-radius: 8px; padding: 10px; margin-top: 10px; display: none; }
+  .tree.open { display: block; }
+
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; overflow-x: auto; }
+  .tab { border: none; background: none; padding: 10px 14px; font-size: 13.5px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ---------- metrics ---------- */
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .metric { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); }
+  .metric span { display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 3px; }
+  .metric strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+  @media (max-width: 620px) { .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { background: var(--surface-2); color: var(--text-muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  tr:last-child td { border-bottom: none; }
+  td.name { font-weight: 600; white-space: normal; }
+  table.wrap-cells td, table.wrap-cells th { white-space: normal; }
+
+  /* ---------- chips / badges ---------- */
+  .chip { display: inline-flex; align-items: center; gap: 5px; margin: 2px 5px 2px 0; padding: 3px 9px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-2); font-size: 11.5px; font-family: ui-monospace, monospace; }
+  .cat-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .cat-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+  /* ---------- definition-list style summary ---------- */
+  dl.kv { display: grid; grid-template-columns: 140px 1fr; row-gap: 6px; column-gap: 10px; font-size: 12.5px; margin: 0; }
+  dl.kv dt { color: var(--text-muted); }
+  dl.kv dd { margin: 0; }
+
+  /* ---------- mapping tab ---------- */
+  .mapping-row { display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--grid); font-size: 13px; }
+  .mapping-row:last-child { border-bottom: none; }
+  .mapping-row .arrow { color: var(--accent); flex: none; }
+  .mapping-row .osc { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text); }
+  .mapping-row .osi { color: var(--text-secondary); }
+  @media (max-width: 700px) { .mapping-row { grid-template-columns: 1fr; row-gap: 4px; } .mapping-row .arrow { display: none; } }
+  .info-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  @media (max-width: 900px) { .info-grid { grid-template-columns: 1fr; } }
+  .impl-badge { font-size: 10px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; text-transform: uppercase; }
+  .impl-badge.yes { background: var(--good-soft); color: #0a5c0a; }
+  .impl-badge.no { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+  .section-sub { font-size: 12.5px; margin: -6px 0 12px; }
+  .ref-links { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; }
+  .ref-links a { color: var(--accent); text-decoration: none; }
+  .ref-links a:hover { text-decoration: underline; }
+  code.field { font-family: ui-monospace, monospace; font-size: 11.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .info-card { background: var(--surface-2); border-radius: var(--radius-sm); padding: 12px 14px; border: 1px solid var(--border); }
+  .info-card h4 { margin: 0 0 5px; font-size: 12.5px; }
+  .info-card p { font-size: 12px; margin: 0; }
+  ul.limits { margin: 4px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--text-secondary); }
+  ul.limits li { margin: 4px 0; }
+
+  /* ---------- empty state ---------- */
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 56px 24px; color: var(--text-muted); }
+  .empty-state .icon { color: var(--border-strong); margin-bottom: 12px; }
+  .empty-state strong { color: var(--text-secondary); font-size: 14px; display: block; margin-bottom: 4px; }
+  .empty-state p { font-size: 12.5px; max-width: 340px; }
+
+  /* ---------- playback ---------- */
+  .canvas-wrap { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  canvas { display: block; width: 100%; }
+  .playback-controls { display: flex; align-items: center; gap: 12px; padding: 12px 4px 2px; flex-wrap: wrap; }
+  .scrub { flex: 1; min-width: 160px; accent-color: var(--accent); }
+  .time-readout { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--text-secondary); min-width: 108px; text-align: right; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--grid); }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .playback-note { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+
+  /* ---------- raw data ---------- */
+  pre.jsonpre { margin: 0; max-height: 440px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 12px; color: var(--text-secondary); background: var(--surface-2); border-radius: 8px; padding: 12px; border: 1px solid var(--border); }
+
+  /* ---------- toast ---------- */
+  .toast-container { position: fixed; top: 72px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+  .toast { min-width: 240px; max-width: 340px; background: var(--text); color: #fff; padding: 10px 14px; border-radius: 9px; font-size: 12.5px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 8px; animation: toast-in .18s ease-out; }
+  .toast.ok { background: #0a5c0a; }
+  .toast.error { background: #8c1f1f; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 600px) {
+    .toast-container { top: auto; bottom: 12px; left: 12px; right: 12px; }
+    .toast { max-width: none; }
+  }
+
+  .footer-note { text-align: center; font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+  main { min-width: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+    </div>
+    <div>
+      <h1>ScenarioBridge</h1>
+      <p>Load a local <code>.xosc</code> (+ optional <code>.xodr</code>) file, inspect it, and preview OSI-style ground truth — all in your browser.</p>
+    </div>
+  </div>
+  <div class="steps" id="steps" aria-hidden="true">
+    <div class="step" id="step-load"><span class="dot"></span>Load</div>
+    <div class="step-connector"></div>
+    <div class="step" id="step-road"><span class="dot"></span>Road network</div>
+    <div class="step-connector"></div>
+    <div class="step" id="step-generate"><span class="dot"></span>Generate</div>
+    <div class="step-connector"></div>
+    <div class="step" id="step-play"><span class="dot"></span>Play back</div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="card">
+      <h3><span class="card-step">1</span>Load an XOSC file</h3>
+      <p class="card-desc">Nothing leaves your browser — parsing runs entirely on your device.</p>
+      <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Choose or drop an OpenSCENARIO file">
+        <div class="upload-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+        <strong>Click to choose a file</strong><br>
+        <span class="small">or drag &amp; drop .xosc / .xml here</span>
+      </div>
+      <input id="fileInput" type="file" accept=".xosc,.xml,application/xml,text/xml">
+      <div class="status-chip" id="status"><span class="msg">No scenario loaded yet.</span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="card-step">2</span>Load road network <span class="small" style="font-weight:400">(optional)</span></h3>
+      <p class="card-desc">Adds a matching <code>.xodr</code> OpenDRIVE file so positions and headings follow the real road geometry instead of a straight schematic lane.</p>
+      <div class="dropzone" id="dropzoneOdr" role="button" tabindex="0" aria-label="Choose or drop an OpenDRIVE file">
+        <div class="upload-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+        <strong>Click to choose a file</strong><br>
+        <span class="small">or drag &amp; drop .xodr / .xml here</span>
+      </div>
+      <input id="fileInputOdr" type="file" accept=".xodr,.xml,application/xml,text/xml">
+      <div class="status-chip" id="statusOdr"><span class="msg">No road network loaded — positions will use the schematic lane model.</span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="card-step">3</span>Generate OSI-style data</h3>
+      <p class="card-desc">Sample the parsed storyboard into GroundTruth-style frames.</p>
+      <div class="field-row">
+        <div>
+          <label for="duration">Duration [s]</label>
+          <input id="duration" type="number" value="25" min="1" max="300" step="1">
+        </div>
+        <div>
+          <label for="hz">Sampling rate [Hz]</label>
+          <input id="hz" type="number" value="20" min="1" max="100" step="1">
+        </div>
+      </div>
+      <p class="hint" id="frameEstimate">≈ 501 frames will be generated</p>
+      <button class="btn primary" id="generateBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Generate frames
+      </button>
+      <button class="btn" id="downloadBtn" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        Download JSON
+      </button>
+      <p class="small">Readable OSI-style JSON — not binary OSI protobuf serialization.</p>
+    </div>
+
+    <div class="card">
+      <h3>Parsed XML structure</h3>
+      <button class="btn small ghost" id="treeToggleBtn" disabled>Show element tree</button>
+      <div id="tree" class="tree mono">Load a file to see its XML element tree.</div>
+    </div>
+  </aside>
+
+  <main>
+    <nav class="tabs" role="tablist" aria-label="Result views">
+      <button class="tab" id="tabOverview" role="tab" aria-selected="true" aria-controls="panelOverview">Overview</button>
+      <button class="tab" id="tabMapping" role="tab" aria-selected="false" aria-controls="panelMapping">OSC → OSI mapping</button>
+      <button class="tab" id="tabSources" role="tab" aria-selected="false" aria-controls="panelSources">Source → OSI table</button>
+      <button class="tab" id="tabPlayback" role="tab" aria-selected="false" aria-controls="panelPlayback">Playback</button>
+      <button class="tab" id="tabData" role="tab" aria-selected="false" aria-controls="panelData">Raw data</button>
+    </nav>
+
+    <section id="panelOverview" class="panel active" role="tabpanel" aria-labelledby="tabOverview" tabindex="0">
+      <div class="metrics">
+        <div class="metric"><span>Loaded file</span><strong id="metricFile">—</strong></div>
+        <div class="metric"><span>Entities</span><strong id="metricEntities">0</strong></div>
+        <div class="metric"><span>Events</span><strong id="metricEvents">0</strong></div>
+        <div class="metric"><span>Generated frames</span><strong id="metricFrames">0</strong></div>
+      </div>
+
+      <div id="overviewEmpty" class="card empty-state">
+        <div class="icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg></div>
+        <strong>No scenario loaded</strong>
+        <p>Choose an .xosc file on the left to see its file header, parameters, road network, entities and events here.</p>
+      </div>
+
+      <div id="overviewContent" style="display:none">
+        <div class="card">
+          <h3>File header &amp; parameters</h3>
+          <dl class="kv" id="headerKv"></dl>
+          <div id="paramChips" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <h3>Road network</h3>
+          <dl class="kv" id="roadKv"></dl>
+          <div id="odrSummary" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <h3>Entities</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Dimensions (L×W×H)</th><th>Init road/lane</th><th>Init s</th><th>Init speed</th><th>Position source</th></tr></thead>
+            <tbody id="entitiesBody"></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <h3>Events</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Name</th><th>Actors</th><th>Trigger t</th><th>Speed target</th><th>Lane change</th></tr></thead>
+            <tbody id="eventsBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelMapping" class="panel" role="tabpanel" aria-labelledby="tabMapping" tabindex="0">
+      <div class="card">
+        <h3>OpenSCENARIO → OSI-style concepts</h3>
+        <p class="card-desc section-sub">Every OSC concept a scenario can contain, and where it lands in OSI. <span class="impl-badge yes">Generated</span> means this tool actually produces that field today; <span class="impl-badge no">Reference only</span> concepts are shown so you know what a full OSC→OSI pipeline would also need to cover.</p>
+        <div id="mappingRows"></div>
+      </div>
+
+      <div class="card">
+        <h3>GroundTruth message — top-level fields</h3>
+        <p class="card-desc section-sub">OSI's <code class="field">GroundTruth</code> message is the container this tool's JSON is a readable stand-in for. These are its top-level fields (ASAM OSI 3.x <code class="field">osi_groundtruth.proto</code>).</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Description</th><th>This tool</th></tr></thead>
+          <tbody id="groundTruthFields"></tbody>
+        </table></div>
+      </div>
+
+      <div class="card">
+        <h3>moving_object fields — this tool's JSON vs. real OSI</h3>
+        <p class="card-desc section-sub">The generated preview uses short, readable field names. Here's what each one stands in for in the actual <code class="field">MovingObject</code> / <code class="field">BaseMoving</code> protobuf messages.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>This tool's JSON</th><th>Real OSI field</th><th>Notes</th></tr></thead>
+          <tbody id="fieldRefRows"></tbody>
+        </table></div>
+      </div>
+
+      <div class="card">
+        <h3>Type &amp; classification enum reference</h3>
+        <p class="card-desc section-sub">Entity buckets shown in this tool (Overview table, playback legend) map to OSI's <code class="field">MovingObject.Type</code> and <code class="field">VehicleClassification.Type</code> enums like this:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>This tool</th><th>MovingObject.Type</th><th>VehicleClassification.Type</th></tr></thead>
+          <tbody id="enumRefRows"></tbody>
+        </table></div>
+      </div>
+
+      <div class="card">
+        <h3>OSI-style messages this tool can approximate</h3>
+        <div class="info-grid">
+          <div class="info-card">
+            <h4>GroundTruth / SensorView</h4>
+            <p>Object pose, velocity, dimensions and classification at every sampled time step — this is what "Generate frames" produces.</p>
+          </div>
+          <div class="info-card">
+            <h4>SensorData</h4>
+            <p>Only meaningful after adding a sensor model (radar/camera/lidar) with a field of view, noise and occlusion — not generated here.</p>
+          </div>
+          <div class="info-card">
+            <h4>TrafficUpdate / TrafficCommand</h4>
+            <p>Optional interpretation of scenario actions and traffic-light/controller state — out of scope for this lightweight parser.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>What this demo simplifies</h3>
+        <ul class="limits">
+          <li>Longitudinal motion between events is straight-line, constant-velocity extrapolation — trajectory and teleport actions mid-scenario aren't simulated.</li>
+          <li>Lane position is schematic (lane index × 3.5 m, straight road, heading always 0) <strong>unless</strong> a matching <code class="field">.xodr</code> is loaded in step 2 — then it's resolved onto the real road centerline and lane width, with heading following the road tangent.</li>
+          <li>OpenDRIVE support covers <code class="field">line</code> and <code class="field">arc</code> geometries exactly, and <code class="field">spiral</code> (clothoid) by numeric integration; <code class="field">poly3</code> / <code class="field">paramPoly3</code> segments fall back to a straight-line approximation. Road <code class="field">laneOffset</code> and elevation/superelevation profiles aren't applied — the world stays flat (z = 0).</li>
+          <li>Junctions and road-to-road transitions aren't resolved — an entity stays on the single road it was initialized on for the whole scenario.</li>
+          <li>Only <code class="field">SimulationTimeCondition</code> triggers resolve to a real time. Distance, speed, TTC, story-element-state and other trigger types can't be evaluated — those events are applied at t&nbsp;=&nbsp;0 instead of being skipped, so the storyboard still animates (flagged as "unresolved — applied at 0.0s" in the Events table).</li>
+          <li>Relative speed/lane targets are approximated against the referenced entity's initial state, not a live multi-entity simulation.</li>
+          <li>Catalog-referenced vehicles without an inline bounding box use estimated default dimensions.</li>
+          <li>Acceleration and orientation-rate are never populated — OSI's <code class="field">base.acceleration</code> / <code class="field">base.orientation_rate</code> stay implicitly zero.</li>
+          <li>No <code class="field">host_vehicle_id</code> is designated — this tool doesn't distinguish an ego vehicle from other entities.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Reference material</h3>
+        <div class="ref-links">
+          <a href="https://www.asam.net/standards/detail/osi/" target="_blank" rel="noopener">ASAM OSI standard overview ↗</a>
+          <a href="https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/interface/architecture/ground_truth.html" target="_blank" rel="noopener">OSI GroundTruth architecture ↗</a>
+          <a href="https://github.com/OpenSimulationInterface/open-simulation-interface/blob/master/osi_groundtruth.proto" target="_blank" rel="noopener">osi_groundtruth.proto ↗</a>
+          <a href="https://github.com/OpenSimulationInterface/open-simulation-interface/blob/master/osi_object.proto" target="_blank" rel="noopener">osi_object.proto ↗</a>
+          <a href="https://publications.pages.asam.net/standards/ASAM_OpenSCENARIO/ASAM_OpenSCENARIO_XML/latest/07_components_scenario/07_02_storyboard_entities.html" target="_blank" rel="noopener">ASAM OpenSCENARIO storyboard docs ↗</a>
+          <a href="https://www.asam.net/standards/detail/opendrive/" target="_blank" rel="noopener">ASAM OpenDRIVE standard overview ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelSources" class="panel" role="tabpanel" aria-labelledby="tabSources" tabindex="0">
+      <div class="card">
+        <h3>What was actually taken from your files</h3>
+        <p class="card-desc section-sub" id="sourcesIntro">A concrete audit trail from your currently loaded file(s) — every row below is built from what was actually parsed, not a generic reference. For the general OSC/OSI concept glossary, see the "OSC → OSI mapping" tab instead.</p>
+      </div>
+
+      <div id="sourcesOscEmpty" class="card empty-state">
+        <div class="icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg></div>
+        <strong>No scenario loaded</strong>
+        <p>Load an .xosc file to see exactly what was extracted from it and where it lands in the OSI output.</p>
+      </div>
+
+      <div id="sourcesOscContent" style="display:none">
+        <div class="card">
+          <h3>From <span id="sourcesOscFileName">your .xosc</span></h3>
+          <p class="card-desc section-sub" id="sourcesOscSummary"></p>
+          <div class="table-wrap"><table class="wrap-cells">
+            <thead><tr><th>Taken from your file</th><th>→ OSI field</th><th>Extracted value</th></tr></thead>
+            <tbody id="sourcesOscBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div id="sourcesOdrEmpty" class="card empty-state">
+        <div class="icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg></div>
+        <strong>No road network loaded</strong>
+        <p>Load a matching .xodr in step 2 to see exactly what was extracted from it. Until then, <code class="field">base.position</code> / <code class="field">.orientation.yaw</code> in the output use the schematic model instead.</p>
+      </div>
+
+      <div id="sourcesOdrContent" style="display:none">
+        <div class="card">
+          <h3>From <span id="sourcesOdrFileName">your .xodr</span></h3>
+          <div class="table-wrap"><table class="wrap-cells">
+            <thead><tr><th>Taken from your file</th><th>→ OSI field</th><th>Extracted value</th></tr></thead>
+            <tbody id="sourcesOdrBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelPlayback" class="panel" role="tabpanel" aria-labelledby="tabPlayback" tabindex="0">
+      <div id="playbackEmpty" class="card empty-state">
+        <div class="icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3l14 9-14 9V3z"/></svg></div>
+        <strong>Nothing to play back yet</strong>
+        <p>Load a scenario and click "Generate frames" to preview an animated, schematic top-down playback here.</p>
+      </div>
+      <div id="playbackContent" class="card" style="display:none">
+        <h3>Animated playback</h3>
+        <p class="card-desc" id="playbackDesc">Schematic top-down view — a straight road, lanes at 3.5 m spacing, entities positioned from the generated frames.</p>
+        <div class="canvas-wrap">
+          <canvas id="canvas" role="img" aria-label="Animated top-down playback of generated entity positions"></canvas>
+        </div>
+        <div class="playback-controls">
+          <button class="btn icon-only" id="playBtn" aria-label="Play">
+            <svg id="playIcon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8V4z"/></svg>
+          </button>
+          <input type="range" class="scrub" id="scrub" min="0" max="0" value="0" step="1" aria-label="Scrub playback position">
+          <span class="time-readout" id="timeReadout">0.00s / 0.00s</span>
+          <select id="speedSelect" aria-label="Playback speed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+          </select>
+        </div>
+        <div class="legend" id="legend"></div>
+        <p class="playback-note">Positions are recomputed from the generated JSON at playback time — nothing here changes the exported data.</p>
+      </div>
+    </section>
+
+    <section id="panelData" class="panel" role="tabpanel" aria-labelledby="tabData" tabindex="0">
+      <div class="card">
+        <h3>Generated OSI-style preview</h3>
+        <p class="card-desc" id="dataNote">Generate frames to see a JSON preview here.</p>
+        <pre class="jsonpre" id="preview">Generate frames after loading a scenario.</pre>
+        <button class="btn small" id="copyBtn" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Copy JSON
+        </button>
+        <button class="btn small" id="downloadBtn2" disabled>Download full JSON</button>
+      </div>
+
+      <div class="card">
+        <h3>Convert to real OSI structure</h3>
+        <p class="card-desc section-sub">Re-shapes the readable JSON above into the actual <code class="field">osi3.GroundTruth</code> message structure — real field names (<code class="field">movingObject</code>, <code class="field">base.orientationRate</code>, …), real enum values, <code class="field">Identifier</code>/<code class="field">Timestamp</code> wrapper messages, and 64-bit fields as strings, per <a href="https://protobuf.dev/programming-guides/json/" target="_blank" rel="noopener">protobuf's standard JSON mapping</a>. Opens in a new window with its own preview and download button.</p>
+        <p class="card-desc section-sub"><strong>Not</strong> the compact binary <code class="field">.osi</code> wire format — that needs the compiled OSI protobuf schema and a protobuf runtime, which this single self-contained HTML file intentionally doesn't bundle.</p>
+        <button class="btn" id="convertOsiBtn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+          Convert to real OSI (new window)
+        </button>
+      </div>
+    </section>
+
+    <p class="footer-note">All parsing, generation and playback happen locally in this page — no scenario data is uploaded anywhere.</p>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const fileInput = $('fileInput');
+  const dropzone = $('dropzone');
+  const fileInputOdr = $('fileInputOdr');
+  const dropzoneOdr = $('dropzoneOdr');
+
+  let parsed = null;
+  let frames = [];
+  let dtUsed = 0.05;
+  let loadedFileName = '';
+  let odrData = null;
+  let loadedOdrFileName = '';
+
+  const CATEGORY_COLORS = { car: '#2a78d6', truck: '#eb6834', pedestrian: '#1baf7a', bike: '#eda100', misc: '#4a3aa7' };
+  const CATEGORY_LABELS = { car: 'Car', truck: 'Truck / van / bus', pedestrian: 'Pedestrian', bike: 'Bike / motorbike', misc: 'Other object' };
+
+  // Real osi3.MovingObject.Type / osi3.MovingObject.VehicleClassification.Type enum values,
+  // verified against ASAM OSI's osi_object.proto. One concrete value is picked per bucket —
+  // e.g. "truck" always maps to TYPE_HEAVY_TRUCK even though buses/vans share that bucket.
+  const OSI_TYPE = { car: 'TYPE_VEHICLE', truck: 'TYPE_VEHICLE', bike: 'TYPE_VEHICLE', pedestrian: 'TYPE_PEDESTRIAN', misc: 'TYPE_OTHER' };
+  const OSI_VEHICLE_CLASS = { car: 'TYPE_CAR', truck: 'TYPE_HEAVY_TRUCK', bike: 'TYPE_MOTORCYCLE' };
+
+  function h(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') node.className = v;
+      else if (v !== null && v !== undefined) node.setAttribute(k, v);
+    }
+    children.flat().forEach(c => {
+      if (c === null || c === undefined) return;
+      node.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+    });
+    return node;
+  }
+
+  function catBadge(bucket, label) {
+    return h('span', { class: 'cat-badge' },
+      h('span', { class: 'cat-dot', style: `background:${CATEGORY_COLORS[bucket] || CATEGORY_COLORS.misc}` }),
+      label || CATEGORY_LABELS[bucket] || bucket);
+  }
+
+  // ---------------------------------------------------------------
+  // Toasts + status chip
+  // ---------------------------------------------------------------
+  function toast(message, type = '') {
+    const node = h('div', { class: 'toast' + (type ? ' ' + type : '') }, message);
+    $('toastContainer').appendChild(node);
+    setTimeout(() => { node.style.opacity = '0'; node.style.transition = 'opacity .2s'; setTimeout(() => node.remove(), 220); }, 3600);
+  }
+
+  function setStatus(message, type = '') {
+    const node = $('status');
+    node.innerHTML = '';
+    node.className = 'status-chip' + (type ? ' ' + type : '');
+    node.appendChild(h('span', { class: 'msg' }, message));
+  }
+
+  function updateSteps() {
+    const stepLoad = $('step-load'), stepRoad = $('step-road'), stepGen = $('step-generate'), stepPlay = $('step-play');
+    stepLoad.className = 'step ' + (parsed ? 'done' : 'active');
+    stepRoad.className = 'step ' + (odrData ? 'done' : (parsed ? 'active' : ''));
+    stepGen.className = 'step ' + (frames.length ? 'done' : (parsed ? 'active' : ''));
+    stepPlay.className = 'step ' + (frames.length ? 'active' : '');
+  }
+
+  // ---------------------------------------------------------------
+  // Tabs
+  // ---------------------------------------------------------------
+  const tabIds = ['Overview', 'Mapping', 'Sources', 'Playback', 'Data'];
+  function activateTab(name) {
+    tabIds.forEach(id => {
+      const btn = $('tab' + id), panel = $('panel' + id);
+      const active = id === name;
+      btn.setAttribute('aria-selected', String(active));
+      panel.classList.toggle('active', active);
+    });
+    if (name === 'Playback') { resizeCanvas(); drawAtIndex(currentIndex); }
+  }
+  tabIds.forEach(id => $('tab' + id).addEventListener('click', () => activateTab(id)));
+
+  // ---------------------------------------------------------------
+  // File loading
+  // ---------------------------------------------------------------
+  function wireDropzone(dz, input, extRegex, badFileMsg, onFile) {
+    dz.addEventListener('click', () => input.click());
+    dz.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); input.click(); }
+    });
+    ['dragenter', 'dragover'].forEach(type => dz.addEventListener(type, event => {
+      event.preventDefault(); event.stopPropagation(); dz.classList.add('drag');
+    }));
+    ['dragleave', 'drop'].forEach(type => dz.addEventListener(type, event => {
+      event.preventDefault(); event.stopPropagation(); dz.classList.remove('drag');
+    }));
+    dz.addEventListener('drop', event => {
+      const file = [...event.dataTransfer.files].find(f => extRegex.test(f.name));
+      if (!file) { toast(badFileMsg, 'error'); return; }
+      onFile(file);
+    });
+    input.addEventListener('change', event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) onFile(file);
+      input.value = '';
+    });
+  }
+
+  wireDropzone(dropzone, fileInput, /\.(xosc|xml)$/i, 'Please drop an .xosc or .xml file.', loadFile);
+  wireDropzone(dropzoneOdr, fileInputOdr, /\.(xodr|xml)$/i, 'Please drop an .xodr or .xml file.', loadOdrFile);
+
+  function loadFile(file) {
+    loadedFileName = file.name;
+    setStatus('Reading ' + file.name + ' …');
+    const reader = new FileReader();
+    reader.onerror = () => { setStatus('The browser could not read this file.', 'error'); toast('Could not read file.', 'error'); };
+    reader.onload = () => {
+      const xmlText = String(reader.result || '');
+      const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+      const error = doc.querySelector('parsererror');
+      if (error) {
+        setStatus('XML parse error: ' + error.textContent.slice(0, 140), 'error');
+        toast('XML parse error — see details on the left.', 'error');
+        return;
+      }
+      if (doc.documentElement.tagName !== 'OpenSCENARIO') {
+        setStatus('This XML does not have an <OpenSCENARIO> root element.', 'error');
+        toast('Not an OpenSCENARIO file.', 'error');
+        return;
+      }
+      try {
+        parsed = parseOsc(doc);
+      } catch (e) {
+        setStatus('Failed to parse scenario: ' + e.message, 'error');
+        toast('Failed to parse scenario.', 'error');
+        return;
+      }
+      frames = [];
+      if (odrData) {
+        odrData = null;
+        loadedOdrFileName = '';
+        setStatus2Odr('No road network loaded — positions will use the schematic lane model.');
+        $('odrSummary').innerHTML = '';
+        toast('New scenario loaded — the previous road network was cleared. Reload a matching .xodr if needed.', '');
+      }
+      renderParsed(doc, parsed);
+      setStatus(file.name + ' — ' + parsed.entities.length + ' entities, ' + parsed.events.length + ' events', 'ok');
+      toast('Loaded ' + file.name, 'ok');
+      $('treeToggleBtn').disabled = false;
+      $('downloadBtn').disabled = true;
+      activateTab('Overview');
+      updateSteps();
+    };
+    reader.readAsText(file);
+  }
+
+  function setStatus2Odr(message, type = '') {
+    const node = $('statusOdr');
+    node.innerHTML = '';
+    node.className = 'status-chip' + (type ? ' ' + type : '');
+    node.appendChild(h('span', { class: 'msg' }, message));
+  }
+
+  function loadOdrFile(file) {
+    loadedOdrFileName = file.name;
+    setStatus2Odr('Reading ' + file.name + ' …');
+    const reader = new FileReader();
+    reader.onerror = () => { setStatus2Odr('The browser could not read this file.', 'error'); toast('Could not read road network file.', 'error'); };
+    reader.onload = () => {
+      const xmlText = String(reader.result || '');
+      const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+      const error = doc.querySelector('parsererror');
+      if (error) {
+        setStatus2Odr('XML parse error: ' + error.textContent.slice(0, 140), 'error');
+        toast('OpenDRIVE XML parse error.', 'error');
+        return;
+      }
+      if (doc.documentElement.tagName !== 'OpenDRIVE') {
+        setStatus2Odr('This XML does not have an <OpenDRIVE> root element.', 'error');
+        toast('Not an OpenDRIVE file.', 'error');
+        return;
+      }
+      try {
+        odrData = parseOdr(doc);
+      } catch (e) {
+        setStatus2Odr('Failed to parse road network: ' + e.message, 'error');
+        toast('Failed to parse road network.', 'error');
+        return;
+      }
+      const roadCount = odrData.roads.size;
+      const note = odrData.warnings.has('unsupported-geometry') ? ' — some geometry segments were approximated as straight lines.' : '';
+      setStatus2Odr(file.name + ' — ' + roadCount + ' road' + (roadCount === 1 ? '' : 's') + note, odrData.warnings.has('unsupported-geometry') ? '' : 'ok');
+      toast('Loaded road network: ' + file.name, 'ok');
+      renderOdrOverview(doc);
+      renderSourcesOdr();
+      if (parsed) renderEntitiesTable();
+      updateSteps();
+      if (frames.length) toast('Click "Generate frames" again to apply the road geometry.', '');
+    };
+    reader.readAsText(file);
+  }
+
+  function textAttr(node, attr, fallback = null) {
+    return node ? (node.getAttribute(attr) ?? fallback) : fallback;
+  }
+
+  // ---------------------------------------------------------------
+  // Parsing
+  // ---------------------------------------------------------------
+  function classifyEntity(obj) {
+    const vehicle = obj.querySelector(':scope > Vehicle');
+    const pedestrian = obj.querySelector(':scope > Pedestrian');
+    const misc = obj.querySelector(':scope > MiscObject');
+    if (vehicle) {
+      const vc = (textAttr(vehicle, 'vehicleCategory', 'car') || 'car').toLowerCase();
+      let bucket = 'car';
+      if (['truck', 'van', 'bus', 'trailer', 'semitrailer'].includes(vc)) bucket = 'truck';
+      else if (['motorbike', 'bicycle'].includes(vc)) bucket = 'bike';
+      return { node: vehicle, bucket, label: vc, box: vehicle.querySelector(':scope > BoundingBox'), defaults: { length: 4.5, width: 1.8, height: 1.5 } };
+    }
+    if (pedestrian) {
+      return { node: pedestrian, bucket: 'pedestrian', label: textAttr(pedestrian, 'pedestrianCategory', 'pedestrian'), box: pedestrian.querySelector(':scope > BoundingBox'), defaults: { length: 0.5, width: 0.5, height: 1.8 } };
+    }
+    if (misc) {
+      return { node: misc, bucket: 'misc', label: textAttr(misc, 'miscObjectCategory', 'object'), box: misc.querySelector(':scope > BoundingBox'), defaults: { length: 1, width: 1, height: 1 } };
+    }
+    return { node: null, bucket: 'misc', label: 'unknown', box: null, defaults: { length: 1.8, width: 1.8, height: 1.5 } };
+  }
+
+  function resolveNumber(value, parameters) {
+    if (value === null || value === undefined) return 0;
+    const direct = Number(value);
+    if (Number.isFinite(direct)) return direct;
+    let expr = String(value).trim();
+    expr = expr.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (m, name) => {
+      const param = parameters.find(p => p.name === name);
+      const n = param ? Number(param.value) : NaN;
+      return Number.isFinite(n) ? '(' + n + ')' : '0';
+    });
+    if (/^[\d\s+\-*/().]+$/.test(expr)) {
+      try {
+        const result = Function('"use strict";return (' + expr + ')')();
+        if (Number.isFinite(result)) return result;
+      } catch (e) { /* fall through to 0 */ }
+    }
+    return 0;
+  }
+
+  function parseOsc(doc) {
+    const root = doc.documentElement;
+    const header = root.querySelector(':scope > FileHeader');
+    const parameters = [...root.querySelectorAll(':scope > ParameterDeclarations > ParameterDeclaration')].map(p => ({
+      name: textAttr(p, 'name'), type: textAttr(p, 'parameterType'), value: textAttr(p, 'value')
+    }));
+
+    const roadNetwork = root.querySelector(':scope > RoadNetwork');
+    const logicFile = roadNetwork?.querySelector(':scope > LogicFile')?.getAttribute('filepath') || null;
+    const sceneFile = roadNetwork?.querySelector(':scope > SceneGraphFile')?.getAttribute('filepath') || null;
+
+    const entities = [...root.querySelectorAll(':scope > Entities > ScenarioObject')].map((obj, index) => {
+      const cls = classifyEntity(obj);
+      const catalog = obj.querySelector(':scope > CatalogReference');
+      return {
+        id: index + 1,
+        name: textAttr(obj, 'name', 'unnamed'),
+        bucket: cls.bucket,
+        category: cls.label,
+        modelName: cls.node ? textAttr(cls.node, 'name') : null,
+        catalog: catalog ? { catalogName: textAttr(catalog, 'catalogName'), entryName: textAttr(catalog, 'entryName') } : null,
+        dimensions: {
+          length: Number(textAttr(cls.box, 'length', cls.defaults.length)),
+          width: Number(textAttr(cls.box, 'width', cls.defaults.width)),
+          height: Number(textAttr(cls.box, 'height', cls.defaults.height))
+        },
+        init: { s: 0, laneId: '-1', roadId: '1', speed: 0 }
+      };
+    });
+
+    const entityByName = new Map(entities.map(e => [e.name, e]));
+
+    root.querySelectorAll(':scope > Storyboard > Init > Actions > Private').forEach(privateNode => {
+      const name = textAttr(privateNode, 'entityRef');
+      const entity = entityByName.get(name);
+      if (!entity) return;
+      privateNode.querySelectorAll(':scope > PrivateAction').forEach(action => {
+        const lane = action.querySelector('TeleportAction Position LanePosition');
+        const speed = action.querySelector('LongitudinalAction SpeedAction SpeedActionTarget AbsoluteTargetSpeed');
+        if (lane) {
+          entity.init.s = resolveNumber(textAttr(lane, 's', '0'), parameters);
+          entity.init.laneId = textAttr(lane, 'laneId', '-1');
+          entity.init.roadId = textAttr(lane, 'roadId', '1');
+        }
+        if (speed) entity.init.speed = resolveNumber(textAttr(speed, 'value', '0'), parameters);
+      });
+    });
+
+    const events = [];
+    root.querySelectorAll(':scope > Storyboard > Story > Act > ManeuverGroup').forEach(group => {
+      // An empty Actors list (e.g. <Actors selectTriggeringEntities="true"/> with no explicit
+      // EntityRef children — common in real-world scenarios) is treated as "applies to every
+      // entity", since this tool doesn't track which entity actually triggered a condition.
+      const actors = [...group.querySelectorAll(':scope > Actors > EntityRef')].map(x => textAttr(x, 'entityRef'));
+      group.querySelectorAll(':scope > Maneuver > Event').forEach(event => {
+        const timeCondition = event.querySelector('StartTrigger SimulationTimeCondition, StartTrigger ByValueCondition SimulationTimeCondition');
+        const time = timeCondition ? resolveNumber(textAttr(timeCondition, 'value', '0'), parameters) : null;
+
+        const speedAction = event.querySelector('SpeedAction');
+        const speedDynamics = speedAction?.querySelector('SpeedActionDynamics');
+        const speedAbs = speedAction?.querySelector('AbsoluteTargetSpeed');
+        const speedRel = speedAction?.querySelector('RelativeTargetSpeed');
+        let speedTargetValue = null, speedMode = null;
+        if (speedAbs) {
+          speedMode = 'absolute';
+          speedTargetValue = resolveNumber(textAttr(speedAbs, 'value', '0'), parameters);
+        } else if (speedRel) {
+          speedMode = 'relative';
+          const refName = textAttr(speedRel, 'entityRef');
+          const valueType = textAttr(speedRel, 'speedTargetValueType', 'delta');
+          const raw = resolveNumber(textAttr(speedRel, 'value', '0'), parameters);
+          const refEntity = entityByName.get(refName);
+          const refSpeed = refEntity ? refEntity.init.speed : 0;
+          speedTargetValue = valueType === 'factor' ? refSpeed * raw : refSpeed + raw;
+        }
+
+        const laneAction = event.querySelector('LaneChangeAction');
+        const laneDynamics = laneAction?.querySelector('LaneChangeActionDynamics');
+        const laneRel = laneAction?.querySelector('RelativeTargetLane');
+        const laneAbs = laneAction?.querySelector('AbsoluteTargetLane');
+        let laneMode = null, laneValue = null;
+        if (laneRel) { laneMode = 'relative'; laneValue = Number(textAttr(laneRel, 'value', '0')); }
+        else if (laneAbs) { laneMode = 'absolute'; laneValue = Number(textAttr(laneAbs, 'value', '0')); }
+
+        events.push({
+          name: textAttr(event, 'name', 'unnamed'),
+          actors,
+          time,
+          speedAction: speedMode ? {
+            targetSpeed: speedTargetValue,
+            mode: speedMode,
+            shape: textAttr(speedDynamics, 'dynamicsShape', 'step'),
+            dimension: textAttr(speedDynamics, 'dynamicsDimension', 'time'),
+            value: resolveNumber(textAttr(speedDynamics, 'value', '0'), parameters)
+          } : null,
+          laneChange: laneMode ? {
+            mode: laneMode,
+            value: laneValue,
+            duration: resolveNumber(textAttr(laneDynamics, 'value', '0'), parameters),
+            shape: textAttr(laneDynamics, 'dynamicsShape', 'linear')
+          } : null
+        });
+      });
+    });
+
+    return {
+      header: {
+        major: textAttr(header, 'revMajor'), minor: textAttr(header, 'revMinor'),
+        description: textAttr(header, 'description'), author: textAttr(header, 'author')
+      },
+      parameters, logicFile, sceneFile, entities, events
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // OpenDRIVE (.xodr) parsing — line & arc geometries exactly,
+  // spiral by numeric integration, poly3/paramPoly3 approximated
+  // as a straight continuation. laneOffset and elevation are not
+  // applied (flat-road, centerline-only model).
+  // ---------------------------------------------------------------
+  function parseOdr(doc) {
+    const root = doc.documentElement;
+    const roads = new Map();
+    const warnings = new Set();
+
+    root.querySelectorAll(':scope > road').forEach(roadEl => {
+      const id = String(textAttr(roadEl, 'id', '0'));
+      const name = textAttr(roadEl, 'name', '');
+      const length = Number(textAttr(roadEl, 'length', '0'));
+
+      const geometries = [...roadEl.querySelectorAll(':scope > planView > geometry')].map(g => {
+        const base = {
+          s: Number(textAttr(g, 's', '0')), x: Number(textAttr(g, 'x', '0')),
+          y: Number(textAttr(g, 'y', '0')), hdg: Number(textAttr(g, 'hdg', '0')),
+          length: Number(textAttr(g, 'length', '0'))
+        };
+        const line = g.querySelector(':scope > line');
+        const arc = g.querySelector(':scope > arc');
+        const spiral = g.querySelector(':scope > spiral');
+        if (line) return { ...base, type: 'line' };
+        if (arc) return { ...base, type: 'arc', curvature: Number(textAttr(arc, 'curvature', '0')) };
+        if (spiral) return { ...base, type: 'spiral', curvStart: Number(textAttr(spiral, 'curvStart', '0')), curvEnd: Number(textAttr(spiral, 'curvEnd', '0')) };
+        warnings.add('unsupported-geometry');
+        return { ...base, type: 'unsupported' };
+      }).sort((a, b) => a.s - b.s);
+
+      const laneSections = [...roadEl.querySelectorAll(':scope > lanes > laneSection')].map(secEl => {
+        const s = Number(textAttr(secEl, 's', '0'));
+        const lanes = new Map();
+        secEl.querySelectorAll(':scope > left > lane, :scope > right > lane').forEach(laneEl => {
+          const laneId = Number(textAttr(laneEl, 'id', '0'));
+          if (!laneId) return;
+          const widths = [...laneEl.querySelectorAll(':scope > width')].map(w => ({
+            sOffset: Number(textAttr(w, 'sOffset', '0')), a: Number(textAttr(w, 'a', '0')),
+            b: Number(textAttr(w, 'b', '0')), c: Number(textAttr(w, 'c', '0')), d: Number(textAttr(w, 'd', '0'))
+          })).sort((x, y) => x.sOffset - y.sOffset);
+          lanes.set(laneId, { widths });
+        });
+        return { s, lanes };
+      }).sort((a, b) => a.s - b.s);
+
+      roads.set(id, { id, name, length, geometries, laneSections, _samples: null });
+    });
+
+    return { roads, warnings };
+  }
+
+  function evalGeometry(geom, ds) {
+    if (geom.type === 'arc') {
+      const k = geom.curvature;
+      if (Math.abs(k) < 1e-9) return { x: geom.x + ds * Math.cos(geom.hdg), y: geom.y + ds * Math.sin(geom.hdg), hdg: geom.hdg };
+      const hdg2 = geom.hdg + k * ds;
+      const r = 1 / k;
+      return {
+        x: geom.x + r * (Math.sin(hdg2) - Math.sin(geom.hdg)),
+        y: geom.y - r * (Math.cos(hdg2) - Math.cos(geom.hdg)),
+        hdg: hdg2
+      };
+    }
+    if (geom.type === 'spiral') {
+      const steps = Math.max(6, Math.ceil(ds / 0.5));
+      const dstep = ds / steps;
+      let x = geom.x, y = geom.y, hdg = geom.hdg;
+      for (let i = 0; i < steps; i++) {
+        const sMid = (i + 0.5) * dstep;
+        const k = geom.length > 0 ? geom.curvStart + (geom.curvEnd - geom.curvStart) * (sMid / geom.length) : geom.curvStart;
+        hdg += k * dstep * 0.5;
+        x += Math.cos(hdg) * dstep;
+        y += Math.sin(hdg) * dstep;
+        hdg += k * dstep * 0.5;
+      }
+      return { x, y, hdg };
+    }
+    // 'line', and 'unsupported' fallback: straight continuation from the segment start pose
+    return { x: geom.x + ds * Math.cos(geom.hdg), y: geom.y + ds * Math.sin(geom.hdg), hdg: geom.hdg };
+  }
+
+  function roadPointAt(road, s) {
+    if (!road.geometries.length) return null;
+    const clampedS = Math.max(0, Math.min(s, road.length || Infinity));
+    let geom = road.geometries.find(g => clampedS >= g.s && clampedS < g.s + g.length);
+    if (!geom) geom = road.geometries[road.geometries.length - 1];
+    return evalGeometry(geom, clampedS - geom.s);
+  }
+
+  function findLaneSection(road, s) {
+    if (!road.laneSections.length) return null;
+    let chosen = road.laneSections[0];
+    for (const sec of road.laneSections) { if (sec.s <= s) chosen = sec; else break; }
+    return chosen;
+  }
+
+  function evalWidthPoly(widths, localS) {
+    if (!widths || !widths.length) return 3.5;
+    let w = widths[0];
+    for (const rec of widths) { if (rec.sOffset <= localS) w = rec; else break; }
+    const ds = localS - w.sOffset;
+    const val = w.a + w.b * ds + w.c * ds * ds + w.d * ds * ds * ds;
+    return val > 0 ? val : 3.5;
+  }
+
+  function laneLateralOffset(section, laneId, localS) {
+    if (!laneId) return 0;
+    const sign = laneId > 0 ? 1 : -1;
+    let cum = 0;
+    for (let id = sign; sign > 0 ? id <= laneId : id >= laneId; id += sign) {
+      const lane = section ? section.lanes.get(id) : null;
+      const w = lane ? evalWidthPoly(lane.widths, localS) : 3.5;
+      cum += (id === laneId ? w / 2 : w) * sign;
+    }
+    return cum;
+  }
+
+  function resolveRoadPosition(odr, roadId, s, laneId) {
+    const road = odr.roads.get(String(roadId));
+    if (!road) return null;
+    const pt = roadPointAt(road, s);
+    if (!pt) return null;
+    const clampedS = Math.max(0, Math.min(s, road.length || s));
+    const section = findLaneSection(road, clampedS);
+    const localS = clampedS - (section ? section.s : 0);
+    const t = laneLateralOffset(section, Number(laneId), localS);
+    return { x: pt.x - t * Math.sin(pt.hdg), y: pt.y + t * Math.cos(pt.hdg), yaw: pt.hdg };
+  }
+
+  // Sampled road + lane-boundary polylines, used for playback rendering. Cached per road.
+  function roadSamples(road) {
+    if (road._samples) return road._samples;
+    const len = road.length || 0;
+    const stepCount = Math.max(8, Math.min(160, Math.ceil(len / 2)));
+    const step = len / stepCount;
+    const samples = [];
+    for (let i = 0; i <= stepCount; i++) {
+      const s = i * step;
+      const pt = roadPointAt(road, s);
+      if (!pt) continue;
+      const section = findLaneSection(road, s);
+      const localS = s - (section ? section.s : 0);
+      const boundaries = [0];
+      if (section) {
+        let cum = 0;
+        for (const id of [...section.lanes.keys()].filter(k => k > 0).sort((a, b) => a - b)) {
+          cum += evalWidthPoly(section.lanes.get(id).widths, localS); boundaries.push(cum);
+        }
+        cum = 0;
+        for (const id of [...section.lanes.keys()].filter(k => k < 0).sort((a, b) => b - a)) {
+          cum += evalWidthPoly(section.lanes.get(id).widths, localS); boundaries.push(-cum);
+        }
+      } else {
+        boundaries.push(3.5, -3.5);
+      }
+      samples.push({ ref: pt, boundaries: boundaries.sort((a, b) => a - b) });
+    }
+    road._samples = samples;
+    return samples;
+  }
+
+  function renderOdrOverview() {
+    const container = $('odrSummary');
+    container.innerHTML = '';
+    if (!odrData) { container.appendChild(h('p', { class: 'small' }, 'No road network file loaded yet.')); return; }
+    const rows = [...odrData.roads.values()];
+    container.appendChild(h('p', { class: 'small' }, `${loadedOdrFileName} — ${rows.length} road${rows.length === 1 ? '' : 's'}`));
+    const table = h('table', {},
+      h('thead', {}, h('tr', {}, h('th', {}, 'Road id'), h('th', {}, 'Name'), h('th', {}, 'Length'), h('th', {}, 'Lane sections'))),
+      h('tbody', {}, ...rows.map(r => h('tr', {},
+        h('td', {}, r.id), h('td', {}, r.name || '—'), h('td', {}, r.length.toFixed(1) + ' m'), h('td', {}, String(r.laneSections.length))
+      )))
+    );
+    container.appendChild(h('div', { class: 'table-wrap' }, table));
+  }
+
+  // ---------------------------------------------------------------
+  // Rendering: Overview + tree
+  // ---------------------------------------------------------------
+  function renderParsed(doc, data) {
+    $('metricFile').textContent = loadedFileName;
+    $('metricEntities').textContent = data.entities.length;
+    $('metricEvents').textContent = data.events.length;
+    $('metricFrames').textContent = '0';
+
+    $('overviewEmpty').style.display = 'none';
+    $('overviewContent').style.display = '';
+
+    const headerKv = $('headerKv'); headerKv.innerHTML = '';
+    [['Revision', (data.header.major ?? '?') + '.' + (data.header.minor ?? '?')],
+     ['Author', data.header.author || '—'],
+     ['Description', data.header.description || '—']].forEach(([k, v]) => {
+      headerKv.appendChild(h('dt', {}, k));
+      headerKv.appendChild(h('dd', {}, v));
+    });
+
+    const chips = $('paramChips'); chips.innerHTML = '';
+    if (!data.parameters.length) chips.appendChild(h('span', { class: 'small' }, 'No parameters declared.'));
+    data.parameters.forEach(p => chips.appendChild(h('span', { class: 'chip' }, `$${p.name} = ${p.value}`)));
+
+    const roadKv = $('roadKv'); roadKv.innerHTML = '';
+    [['LogicFile', data.logicFile || 'not specified'], ['SceneGraphFile', data.sceneFile || 'not specified']].forEach(([k, v]) => {
+      roadKv.appendChild(h('dt', {}, k));
+      roadKv.appendChild(h('dd', {}, v));
+    });
+    renderOdrOverview();
+    renderSourcesOdr();
+
+    renderEntitiesTable();
+    renderSourcesOsc();
+
+    const eventsBody = $('eventsBody'); eventsBody.innerHTML = '';
+    data.events.forEach(e => {
+      eventsBody.appendChild(h('tr', {},
+        h('td', { class: 'name' }, e.name),
+        h('td', {}, e.actors.length ? e.actors.join(', ') : '(all entities)'),
+        h('td', {}, e.time !== null ? e.time.toFixed(1) + 's' : 'unresolved — applied at 0.0s'),
+        h('td', {}, e.speedAction ? `${e.speedAction.targetSpeed.toFixed(1)} m/s (${e.speedAction.mode})` : '—'),
+        h('td', {}, e.laneChange ? `${e.laneChange.mode === 'absolute' ? 'lane ' : 'Δ'}${e.laneChange.value}` : '—')
+      ));
+    });
+    if (!data.events.length) eventsBody.appendChild(h('tr', {}, h('td', { colspan: '5', class: 'small' }, 'No storyboard events found.')));
+
+    $('tree').textContent = xmlTree(doc.documentElement);
+
+    // Reset downstream views
+    frames = [];
+    $('metricFrames').textContent = '0';
+    $('playbackEmpty').style.display = '';
+    $('playbackContent').style.display = 'none';
+    $('preview').textContent = 'Generate frames after loading a scenario.';
+    $('dataNote').textContent = 'Generate frames to see a JSON preview here.';
+    $('copyBtn').disabled = true;
+    $('downloadBtn2').disabled = true;
+    $('convertOsiBtn').disabled = true;
+  }
+
+  function renderEntitiesTable() {
+    if (!parsed) return;
+    const entitiesBody = $('entitiesBody'); entitiesBody.innerHTML = '';
+    parsed.entities.forEach(e => {
+      const resolved = odrData && odrData.roads.has(String(e.init.roadId));
+      entitiesBody.appendChild(h('tr', {},
+        h('td', {}, String(e.id)),
+        h('td', { class: 'name' }, e.name),
+        h('td', {}, catBadge(e.bucket, e.category)),
+        h('td', {}, `${e.dimensions.length.toFixed(1)} × ${e.dimensions.width.toFixed(1)} × ${e.dimensions.height.toFixed(1)} m`),
+        h('td', {}, `road ${e.init.roadId} / lane ${e.init.laneId}`),
+        h('td', {}, `${e.init.s.toFixed(1)} m`),
+        h('td', {}, `${e.init.speed.toFixed(1)} m/s`),
+        h('td', {}, resolved
+          ? h('span', { class: 'impl-badge yes' }, 'Road geometry')
+          : h('span', { class: 'impl-badge no' }, 'Schematic'))
+      ));
+    });
+    if (!parsed.entities.length) entitiesBody.appendChild(h('tr', {}, h('td', { colspan: '8', class: 'small' }, 'No ScenarioObject entities found.')));
+  }
+
+  // ---------------------------------------------------------------
+  // Sources tab: a concrete, file-specific audit trail (not a generic
+  // reference) — rebuilt from whatever is currently parsed/loaded.
+  // ---------------------------------------------------------------
+  function sourceRow(source, osiField, value) {
+    return h('tr', {},
+      h('td', {}, source),
+      h('td', {}, h('code', { class: 'field' }, osiField)),
+      h('td', {}, value));
+  }
+
+  function renderSourcesOsc() {
+    const emptyEl = $('sourcesOscEmpty'), contentEl = $('sourcesOscContent');
+    if (!parsed) { emptyEl.style.display = ''; contentEl.style.display = 'none'; return; }
+    emptyEl.style.display = 'none'; contentEl.style.display = '';
+    $('sourcesOscFileName').textContent = loadedFileName || 'your .xosc';
+    $('sourcesOscSummary').textContent =
+      `${parsed.entities.length} entit${parsed.entities.length === 1 ? 'y' : 'ies'}, ${parsed.events.length} event${parsed.events.length === 1 ? '' : 's'}, ${parsed.parameters.length} parameter${parsed.parameters.length === 1 ? '' : 's'} found and mapped below.`;
+
+    const body = $('sourcesOscBody'); body.innerHTML = '';
+    const rows = [];
+
+    rows.push(sourceRow('FileHeader@revMajor/@revMinor/@author/@description', '(metadata only — no OSI field)',
+      `rev ${parsed.header.major ?? '?'}.${parsed.header.minor ?? '?'}, author "${parsed.header.author || '—'}"`));
+
+    if (parsed.parameters.length) {
+      parsed.parameters.forEach(p => rows.push(sourceRow(`ParameterDeclaration@name="${p.name}"`, '(resolves $' + p.name + ' references below)', `${p.value}${p.type ? ' (' + p.type + ')' : ''}`)));
+    }
+
+    parsed.entities.forEach(e => {
+      const tag = `"${e.name}"`;
+      rows.push(sourceRow(`ScenarioObject@name=${tag}`, 'moving_object[].id / .name', `id ${e.id}, name "${e.name}"`));
+      rows.push(sourceRow(`${tag} Vehicle/Pedestrian/MiscObject category`, 'type / vehicle_classification.type', `${e.category} → bucketed as "${e.bucket}"`));
+      rows.push(sourceRow(`${tag} BoundingBox/Dimensions`, 'base.dimension.*', `${e.dimensions.length.toFixed(2)} × ${e.dimensions.width.toFixed(2)} × ${e.dimensions.height.toFixed(2)} m${e.catalog ? ' (catalog-referenced, no inline box — estimated)' : ''}`));
+      rows.push(sourceRow(`${tag} Init LanePosition`, 'base.position.* (initial)', `road ${e.init.roadId} / lane ${e.init.laneId} / s=${e.init.s.toFixed(1)}m`));
+      rows.push(sourceRow(`${tag} Init SpeedAction`, 'base.velocity.* (initial)', `${e.init.speed.toFixed(1)} m/s`));
+    });
+
+    parsed.events.forEach(ev => {
+      const tag = `"${ev.name}"`;
+      const actorsTxt = ev.actors.length ? ev.actors.join(', ') : 'all entities';
+      rows.push(sourceRow(`Event@name=${tag} StartTrigger`, 'timestamp', `${ev.time !== null ? ev.time.toFixed(1) + 's' : 'unresolved → applied at 0.0s'} — actors: ${actorsTxt}`));
+      if (ev.speedAction) rows.push(sourceRow(`${tag} SpeedAction`, 'base.velocity.* (over time)', `${ev.speedAction.targetSpeed.toFixed(1)} m/s (${ev.speedAction.mode})`));
+      if (ev.laneChange) rows.push(sourceRow(`${tag} LaneChangeAction`, 'lateral base.position / .orientation.yaw', `${ev.laneChange.mode === 'absolute' ? 'lane ' + ev.laneChange.value : 'Δ' + ev.laneChange.value + ' lanes'} (${ev.laneChange.mode})`));
+    });
+
+    rows.forEach(r => body.appendChild(r));
+    if (!rows.length) body.appendChild(h('tr', {}, h('td', { colspan: '3', class: 'small' }, 'Nothing extracted from this file.')));
+  }
+
+  function renderSourcesOdr() {
+    const emptyEl = $('sourcesOdrEmpty'), contentEl = $('sourcesOdrContent');
+    if (!odrData) { emptyEl.style.display = ''; contentEl.style.display = 'none'; return; }
+    emptyEl.style.display = 'none'; contentEl.style.display = '';
+    $('sourcesOdrFileName').textContent = loadedOdrFileName || 'your .xodr';
+
+    const body = $('sourcesOdrBody'); body.innerHTML = '';
+    const rows = [];
+    const usedRoadIds = parsed ? new Set(parsed.entities.map(e => String(e.init.roadId))) : new Set();
+
+    [...odrData.roads.values()].forEach(road => {
+      const usedNote = usedRoadIds.has(road.id) ? ' — used by an entity in the loaded scenario' : ' — not referenced by any loaded entity';
+      rows.push(sourceRow(`road@id="${road.id}" @length="${road.length.toFixed(1)}"${road.name ? ' @name="' + road.name + '"' : ''}`,
+        '(selects which road a lane lookup resolves against)', `length ${road.length.toFixed(1)} m${usedNote}`));
+
+      road.geometries.forEach((g, i) => {
+        const kind = g.type === 'unsupported' ? 'unsupported → approximated as straight' : g.type;
+        rows.push(sourceRow(`road ${road.id} planView/geometry[${i}] (${kind})`, 'base.position.x / .y, base.orientation.yaw',
+          `s=${g.s.toFixed(1)}–${(g.s + g.length).toFixed(1)}m, length ${g.length.toFixed(1)}m, start hdg ${g.hdg.toFixed(3)} rad`));
+      });
+
+      road.laneSections.forEach((sec, si) => {
+        [...sec.lanes.entries()].sort((a, b) => a[0] - b[0]).forEach(([laneId, lane]) => {
+          const w0 = lane.widths[0];
+          const widthTxt = w0 ? `a=${w0.a.toFixed(2)}${(w0.b || w0.c || w0.d) ? ' (+ b/c/d terms)' : ''} at sOffset ${w0.sOffset.toFixed(1)}m` : '(no width record — 3.5m default used)';
+          rows.push(sourceRow(`road ${road.id} laneSection[${si}]@s=${sec.s.toFixed(1)} lane@id=${laneId}`, 'lateral offset used in base.position.*', widthTxt));
+        });
+      });
+    });
+
+    rows.forEach(r => body.appendChild(r));
+    if (!rows.length) body.appendChild(h('tr', {}, h('td', { colspan: '3', class: 'small' }, 'No roads found in this file.')));
+  }
+
+  function xmlTree(node, depth = 0, maxDepth = 7) {
+    if (depth > maxDepth) return '  '.repeat(depth) + '…\n';
+    const attrs = [...node.attributes].map(a => `${a.name}="${a.value}"`).join(' ');
+    let out = '  '.repeat(depth) + '<' + node.tagName + (attrs ? ' ' + attrs : '') + '>\n';
+    [...node.children].forEach(child => out += xmlTree(child, depth + 1, maxDepth));
+    return out;
+  }
+
+  $('treeToggleBtn').addEventListener('click', () => {
+    const open = $('tree').classList.toggle('open');
+    $('treeToggleBtn').textContent = open ? 'Hide element tree' : 'Show element tree';
+  });
+
+  // ---------------------------------------------------------------
+  // Mapping tab (static reference content)
+  // ---------------------------------------------------------------
+  (function renderMapping() {
+    const rows = [
+      ['ScenarioObject', 'GroundTruth.moving_object[]', true],
+      ['Vehicle / Pedestrian / MiscObject vehicleCategory', 'moving_object.type + vehicle_classification.type', true],
+      ['Vehicle / Pedestrian / MiscObject BoundingBox', 'moving_object.base.dimension (length/width/height)', true],
+      ['Init TeleportAction / LanePosition', 'initial base.position (schematic; true world x/y needs OpenDRIVE)', true],
+      ['Init SpeedAction & storyboard SpeedAction', 'base.velocity over time', true],
+      ['LaneChangeAction (absolute & relative target)', 'lateral base.position (schematic lane × 3.5 m)', true],
+      ['Event StartTrigger (SimulationTimeCondition; other trigger types fall back to t=0)', 'timestamp at which a new state becomes active', true],
+      ['RelativeTargetSpeed / RelativeTargetLane', 'target approximated from referenced entity’s initial state', true],
+      ['RoadNetwork LogicFile (OpenDRIVE .xodr, if loaded)', 'base.position resolved onto real road/lane geometry', true],
+      ['RoadNetwork SceneGraphFile', 'stationary_object visual mesh reference', false],
+      ['TeleportAction / WorldPosition', 'base.position given directly in the global frame', false],
+      ['FollowTrajectoryAction', 'moving_object.future_trajectory', false],
+      ['EnvironmentAction / Weather', 'GroundTruth.environmental_conditions', false],
+      ['Controller / TrafficSignalController', 'GroundTruth.traffic_light state', false],
+      ['Triggering / first entity designation', 'GroundTruth.host_vehicle_id', false]
+    ];
+    const container = $('mappingRows');
+    rows.forEach(([osc, osi, implemented]) => {
+      container.appendChild(h('div', { class: 'mapping-row' },
+        h('span', { class: 'osc' }, osc),
+        h('span', { class: 'arrow' }, '→'),
+        h('span', { class: 'osi' }, osi),
+        h('span', { class: 'impl-badge ' + (implemented ? 'yes' : 'no') }, implemented ? 'Generated' : 'Reference only')
+      ));
+    });
+
+    const gtFields = [
+      ['timestamp', 'Timestamp', 'Simulated time of this frame (zero point is arbitrary, consistent across frames).', true],
+      ['host_vehicle_id', 'Identifier', 'ID of the ego / host MovingObject.', false],
+      ['moving_object', 'repeated MovingObject', 'All dynamic entities, including host vehicle(s) — this is what "Generate frames" fills in.', true],
+      ['stationary_object', 'repeated StationaryObject', 'Fixed objects (poles, barriers, parked props) excluding signs/lights.', false],
+      ['traffic_sign', 'repeated TrafficSign', 'Traffic signs in the environment.', false],
+      ['traffic_light', 'repeated TrafficLight', 'Traffic signal positions and states.', false],
+      ['road_marking', 'repeated RoadMarking', 'Road surface markings other than lane boundaries.', false],
+      ['lane_boundary', 'repeated LaneBoundary', 'Geometry of individual lane boundaries.', false],
+      ['lane', 'repeated Lane', 'Lanes forming the road network (from OpenDRIVE).', false],
+      ['occupant', 'repeated Occupant', 'Passengers inside the host vehicle.', false],
+      ['environmental_conditions', 'EnvironmentalConditions', 'Weather, lighting and atmosphere.', false],
+      ['country_code / proj_string / map_reference', 'uint32 / string / string', 'Localization and map-alignment metadata.', false]
+    ];
+    const gtBody = $('groundTruthFields');
+    gtFields.forEach(([field, type, desc, implemented]) => {
+      gtBody.appendChild(h('tr', {},
+        h('td', {}, h('code', { class: 'field' }, field)),
+        h('td', {}, type),
+        h('td', { style: 'white-space:normal' }, desc),
+        h('td', {}, h('span', { class: 'impl-badge ' + (implemented ? 'yes' : 'no') }, implemented ? 'Yes' : 'No'))
+      ));
+    });
+
+    const fieldRefRows = [
+      ['id', 'moving_object[].id.value', 'Sequential per entity, matches the ScenarioObject order.'],
+      ['name', '(no direct OSI field)', 'Kept for readability; a real pipeline would carry it via source_reference instead.'],
+      ['classification', 'type + vehicle_classification.type', 'See the enum reference table below.'],
+      ['base.x_m / y_m / z_m', 'base.position.x / y / z (Vector3d, m)', 'Global frame; z_m is always 0 (flat-road assumption). x/y are schematic unless a .xodr is loaded, in which case they follow the real road/lane geometry.'],
+      ['base.yaw_rad', 'base.orientation.yaw (Orientation3d, rad)', '0 in the schematic model; with a loaded .xodr it follows the road’s tangent heading at each entity’s position.'],
+      ['base.vx_mps / vy_mps / vz_mps', 'base.velocity.x / y / z (Vector3d, m/s)', 'vz_mps is always 0. vy_mps is 0 in the schematic model; with a loaded .xodr, vx/vy are speed resolved along the road heading — lateral lane-change speed itself still isn’t modeled.'],
+      ['dimension_m.length / width / height', 'base.dimension.length / width / height (m)', 'From BoundingBox, or an estimated default.'],
+      ['(not generated)', 'base.acceleration', 'Left implicitly zero — speed changes are applied as steps, not ramps.'],
+      ['(not generated)', 'base.orientation_rate', 'Left implicitly zero.']
+    ];
+    const frBody = $('fieldRefRows');
+    fieldRefRows.forEach(([a, b, note]) => {
+      frBody.appendChild(h('tr', {},
+        h('td', {}, h('code', { class: 'field' }, a)),
+        h('td', {}, h('code', { class: 'field' }, b)),
+        h('td', { style: 'white-space:normal' }, note)
+      ));
+    });
+
+    const enumRows = [
+      ['car', 'TYPE_VEHICLE', 'TYPE_CAR'],
+      ['truck', 'TYPE_VEHICLE', 'TYPE_HEAVY_TRUCK / TYPE_VAN / TYPE_BUS'],
+      ['pedestrian', 'TYPE_PEDESTRIAN', '— (uses pedestrian_attributes instead)'],
+      ['bike', 'TYPE_VEHICLE', 'TYPE_MOTORCYCLE / TYPE_BICYCLE'],
+      ['misc', 'TYPE_OTHER', '—']
+    ];
+    const enumBody = $('enumRefRows');
+    enumRows.forEach(([bucket, type, vclass]) => {
+      enumBody.appendChild(h('tr', {},
+        h('td', {}, catBadge(bucket)),
+        h('td', {}, h('code', { class: 'field' }, type)),
+        h('td', {}, vclass)
+      ));
+    });
+  })();
+
+  // ---------------------------------------------------------------
+  // Frame generation
+  // ---------------------------------------------------------------
+  function updateFrameEstimate() {
+    const duration = Number($('duration').value) || 0;
+    const hz = Number($('hz').value) || 0;
+    if (duration > 0 && hz > 0) {
+      const steps = Math.max(1, Math.round(duration * hz)) + 1;
+      $('frameEstimate').textContent = `≈ ${steps} frames will be generated`;
+    } else {
+      $('frameEstimate').textContent = 'Enter a duration and sampling rate greater than zero.';
+    }
+  }
+  $('duration').addEventListener('input', updateFrameEstimate);
+  $('hz').addEventListener('input', updateFrameEstimate);
+  updateFrameEstimate();
+
+  $('generateBtn').addEventListener('click', () => {
+    if (!parsed) { setStatus('Load an .xosc file before generating OSI frames.', 'error'); toast('Load a scenario first.', 'error'); return; }
+    const duration = Number($('duration').value);
+    const hz = Number($('hz').value);
+    if (!(duration > 0 && hz > 0)) { setStatus('Duration and sampling rate must be greater than zero.', 'error'); toast('Duration/rate must be > 0.', 'error'); return; }
+
+    const genBtn = $('generateBtn');
+    genBtn.disabled = true;
+    const originalLabel = genBtn.innerHTML;
+    genBtn.innerHTML = 'Generating…';
+
+    setTimeout(() => {
+      dtUsed = 1 / hz;
+      frames = generateFrames(parsed, duration, dtUsed);
+      genBtn.disabled = false;
+      genBtn.innerHTML = originalLabel;
+
+      $('metricFrames').textContent = frames.length;
+      $('preview').textContent = JSON.stringify(frames.slice(0, 3), null, 2);
+      $('dataNote').textContent = `Showing the first 3 of ${frames.length} frames — download for the full dataset.`;
+      $('copyBtn').disabled = false;
+      $('downloadBtn').disabled = false;
+      $('downloadBtn2').disabled = false;
+      $('convertOsiBtn').disabled = false;
+
+      setStatus(`Generated ${frames.length} OSI-style frames at ${hz} Hz.`, 'ok');
+      toast(`Generated ${frames.length} frames`, 'ok');
+      updateSteps();
+
+      setupPlayback();
+      activateTab('Playback');
+    }, 10);
+  });
+
+  function generateFrames(data, duration, dt) {
+    const steps = Math.max(1, Math.round(duration / dt));
+    const framesOut = new Array(steps + 1);
+    let errorCount = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = i * dt;
+      const objects = data.entities.map(entity => {
+        try {
+          return stateAt(entity, data.events, t);
+        } catch (e) {
+          errorCount++;
+          if (errorCount <= 3) console.error('stateAt failed for', entity.name, 'at t=' + t, e);
+          return {
+            id: entity.id, name: entity.name, classification: entity.bucket,
+            base: { x_m: entity.init.s, y_m: Number(entity.init.laneId) * 3.5 || 0, z_m: 0, yaw_rad: 0, vx_mps: 0, vy_mps: 0, vz_mps: 0 },
+            dimension_m: entity.dimensions
+          };
+        }
+      });
+      framesOut[i] = { timestamp_s: Number(t.toFixed(4)), global_ground_truth: { moving_object: objects } };
+    }
+    if (errorCount) toast(`${errorCount} frame(s) hit a computation error and fell back to a static position — see the console for details.`, 'error');
+    return framesOut;
+  }
+
+  function stateAt(entity, events, t) {
+    let speed = entity.init.speed;
+    let x = entity.init.s;
+    let lane = Number(entity.init.laneId);
+    if (!Number.isFinite(lane)) lane = -1;
+    const laneWidth = 3.5;
+
+    // Events whose trigger isn't a resolvable SimulationTimeCondition (distance, state,
+    // TTC, story-element-completed, ...) get an effective time of 0 rather than being
+    // skipped forever — otherwise a scenario driven mainly by non-time triggers would
+    // never animate past its initial frame. They're still flagged as "unresolved" in
+    // the Overview events table so this approximation is visible.
+    const relevant = events
+      .filter(e => e.actors.length === 0 || e.actors.includes(entity.name))
+      .map(e => ({ ...e, effectiveTime: e.time !== null ? e.time : 0 }))
+      .filter(e => e.effectiveTime <= t)
+      .sort((a, b) => a.effectiveTime - b.effectiveTime);
+
+    let cursor = 0;
+    for (const event of relevant) {
+      const step = Math.max(0, event.effectiveTime - cursor);
+      x += speed * step;
+      cursor = event.effectiveTime;
+      if (event.speedAction) speed = event.speedAction.targetSpeed;
+      if (event.laneChange) lane = event.laneChange.mode === 'absolute' ? event.laneChange.value : lane + event.laneChange.value;
+    }
+    x += speed * Math.max(0, t - cursor);
+
+    let worldX = x, worldY = lane * laneWidth, yaw = 0;
+    if (odrData) {
+      const resolved = resolveRoadPosition(odrData, entity.init.roadId, x, lane);
+      if (resolved) { worldX = resolved.x; worldY = resolved.y; yaw = resolved.yaw; }
+    }
+    const vx = speed * Math.cos(yaw), vy = speed * Math.sin(yaw);
+
+    return {
+      id: entity.id,
+      name: entity.name,
+      classification: entity.bucket === 'car' ? (entity.category || 'car') : entity.bucket,
+      base: {
+        x_m: Number(worldX.toFixed(3)), y_m: Number(worldY.toFixed(3)), z_m: 0,
+        yaw_rad: Number(yaw.toFixed(4)), vx_mps: Number(vx.toFixed(3)), vy_mps: Number(vy.toFixed(3)), vz_mps: 0
+      },
+      dimension_m: entity.dimensions
+    };
+  }
+
+  $('downloadBtn').addEventListener('click', downloadJson);
+  $('downloadBtn2').addEventListener('click', downloadJson);
+  function downloadJson() {
+    if (!frames.length) { toast('Generate frames before downloading.', 'error'); return; }
+    const blob = new Blob([JSON.stringify(frames, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = (loadedFileName || 'scenario').replace(/\.(xosc|xml)$/i, '') + '_osi_style_ground_truth.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast('Download started', 'ok');
+  }
+
+  $('copyBtn').addEventListener('click', async () => {
+    if (!frames.length) return;
+    const text = JSON.stringify(frames, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copied full JSON to clipboard', 'ok');
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); toast('Copied full JSON to clipboard', 'ok'); }
+      catch (e2) { toast('Could not copy — try Download instead.', 'error'); }
+      ta.remove();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Convert to real OSI structure (osi3.GroundTruth, protobuf JSON
+  // mapping) and open it in a new window.
+  // ---------------------------------------------------------------
+  function toRealOsiFrame(frame) {
+    const totalSeconds = frame.timestamp_s;
+    const seconds = Math.floor(totalSeconds);
+    const nanos = Math.max(0, Math.round((totalSeconds - seconds) * 1e9));
+    return {
+      timestamp: { seconds: String(seconds), nanos },
+      movingObject: frame.global_ground_truth.moving_object.map(o => {
+        const entity = parsed ? parsed.entities.find(e => e.id === o.id) : null;
+        const bucket = entity ? entity.bucket : 'misc';
+        const obj = {
+          id: { value: String(o.id) },
+          base: {
+            dimension: { length: o.dimension_m.length, width: o.dimension_m.width, height: o.dimension_m.height },
+            position: { x: o.base.x_m, y: o.base.y_m, z: o.base.z_m },
+            orientation: { roll: 0, pitch: 0, yaw: o.base.yaw_rad },
+            velocity: { x: o.base.vx_mps, y: o.base.vy_mps, z: o.base.vz_mps },
+            acceleration: { x: 0, y: 0, z: 0 },
+            orientationRate: { roll: 0, pitch: 0, yaw: 0 }
+          },
+          type: OSI_TYPE[bucket] || 'TYPE_UNKNOWN'
+        };
+        if (OSI_VEHICLE_CLASS[bucket]) obj.vehicleClassification = { type: OSI_VEHICLE_CLASS[bucket] };
+        if (bucket === 'pedestrian') obj.pedestrianAttributes = {};
+        return obj;
+      })
+    };
+  }
+
+  function buildRealOsiWindowHtml(realOsiFrames, sourceName) {
+    const previewCount = Math.min(2, realOsiFrames.length);
+    // Escape every "<" so no entity-name-derived data can contain a raw closing tag
+    // once embedded into the new window's markup below.
+    const previewText = JSON.stringify(realOsiFrames.slice(0, previewCount), null, 2)
+      .replace(/</g, '\\u003c');
+    const fullJson = JSON.stringify(realOsiFrames).replace(/</g, '\\u003c');
+    const title = 'Real OSI structure — ' + (sourceName || 'ScenarioBridge export');
+    // Built via concatenation, never written literally, so the *outer* page's own
+    // <script> block (this very file) can't be mistaken for closed by the HTML parser.
+    const scriptOpen = '<' + 'script>';
+    const scriptClose = '<' + '/script>';
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>${title.replace(/</g, '&lt;')}</title>
+<style>
+  body{margin:0;background:#f9f9f7;color:#0b0b0b;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:24px 28px 60px;}
+  h1{font-size:18px;margin:0 0 6px;}
+  p{color:#52514e;font-size:13px;line-height:1.55;max-width:760px;}
+  .card{background:#fcfcfb;border:1px solid rgba(11,11,11,.1);border-radius:12px;padding:16px;margin:16px 0;box-shadow:0 1px 2px rgba(11,11,11,.05);}
+  pre{margin:0;max-height:520px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;background:#f3f2ee;border-radius:8px;padding:12px;border:1px solid rgba(11,11,11,.1);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  button{cursor:pointer;border:1px solid #2a78d6;border-radius:8px;background:#2a78d6;color:#fff;padding:9px 14px;font-size:13px;font-weight:600;}
+  button:hover{background:#1c5cab;}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f3f2ee;padding:1px 5px;border-radius:5px;font-size:12px;}
+  .note{font-size:12px;color:#8c1f1f;background:#fdecec;border-radius:8px;padding:10px 12px;margin:10px 0;}
+</style></head>
+<body>
+  <h1>osi3.GroundTruth — real OSI structure</h1>
+  <p>Converted from <strong>${(sourceName || 'ScenarioBridge').replace(/</g, '&lt;')}</strong>: ${realOsiFrames.length} frame${realOsiFrames.length === 1 ? '' : 's'}, each shaped like one real <code>osi3.GroundTruth</code> protobuf message — real field names (<code>movingObject</code>, <code>base.orientationRate</code>, …), real <code>MovingObject.Type</code> / <code>VehicleClassification.Type</code> enum values, <code>Identifier</code> / <code>Timestamp</code> wrapper messages, and 64-bit fields as JSON strings — following <a href="https://protobuf.dev/programming-guides/json/" target="_blank" rel="noopener">protobuf's standard JSON mapping</a> (camelCase field names).</p>
+  <div class="note">This is a JSON representation of the message structure, not the compact binary <code>.osi</code> wire format — that requires the compiled OSI protobuf schema and a protobuf runtime (e.g. protobuf.js + the <code>.proto</code> files), which isn't bundled here. <code>host_vehicle_id</code> is also omitted — this tool doesn't designate an ego vehicle.</div>
+  <div class="card">
+    <strong>Preview — first ${previewCount} of ${realOsiFrames.length} frame${realOsiFrames.length === 1 ? '' : 's'}</strong>
+    <pre>${previewText}</pre>
+  </div>
+  <button id="dl">Download full osi_groundtruth.json (${realOsiFrames.length} frames)</button>
+  ${scriptOpen}
+    const fullData = ${fullJson};
+    document.getElementById('dl').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'osi_groundtruth.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+  ${scriptClose}
+</body></html>`;
+  }
+
+  $('convertOsiBtn').addEventListener('click', () => {
+    if (!frames.length) { toast('Generate frames before converting.', 'error'); return; }
+    let realOsiFrames;
+    try {
+      realOsiFrames = frames.map(toRealOsiFrame);
+    } catch (e) {
+      console.error('Real-OSI conversion failed', e);
+      toast('Conversion failed — see console for details.', 'error');
+      return;
+    }
+    const pageHtml = buildRealOsiWindowHtml(realOsiFrames, loadedFileName);
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast('Pop-up blocked — allow pop-ups for this page, or use Download JSON instead.', 'error');
+      return;
+    }
+    win.document.open();
+    win.document.write(pageHtml);
+    win.document.close();
+    toast('Opened real OSI structure in a new window.', 'ok');
+  });
+
+  // ---------------------------------------------------------------
+  // Playback
+  // ---------------------------------------------------------------
+  let currentIndex = 0;
+  let playing = false;
+  let playStartWall = 0;
+  let playStartSimTime = 0;
+  let speedMul = 1;
+  let worldBounds = { minX: 0, maxX: 10, minY: -7, maxY: 7 };
+  let roadsInUse = [];
+
+  function setupPlayback() {
+    $('playbackEmpty').style.display = 'none';
+    $('playbackContent').style.display = '';
+
+    roadsInUse = [];
+    if (odrData) {
+      const roadIds = new Set(parsed.entities.map(e => String(e.init.roadId)));
+      roadsInUse = [...roadIds].map(id => odrData.roads.get(id)).filter(Boolean);
+    }
+    $('playbackDesc').textContent = roadsInUse.length
+      ? 'Top-down view resolved from the loaded OpenDRIVE road geometry — entities follow the real centerline, lane width and heading.'
+      : 'Schematic top-down view — a straight road, lanes at 3.5 m spacing, entities positioned from the generated frames.';
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    frames.forEach(f => f.global_ground_truth.moving_object.forEach(o => {
+      minX = Math.min(minX, o.base.x_m); maxX = Math.max(maxX, o.base.x_m);
+      minY = Math.min(minY, o.base.y_m); maxY = Math.max(maxY, o.base.y_m);
+    }));
+    roadsInUse.forEach(road => roadSamples(road).forEach(sample => {
+      sample.boundaries.forEach(t => {
+        const px = sample.ref.x - t * Math.sin(sample.ref.hdg);
+        const py = sample.ref.y + t * Math.cos(sample.ref.hdg);
+        minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+        minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+      });
+    }));
+    if (!Number.isFinite(minX)) { minX = 0; maxX = 10; }
+    if (!Number.isFinite(minY)) { minY = -7; maxY = 7; }
+    const padX = Math.max(4, (maxX - minX) * 0.08);
+    const padY = Math.max(4, (maxY - minY) * 0.08);
+    if (maxY - minY < 10.5 && !roadsInUse.length) { const mid = (maxY + minY) / 2; minY = mid - 5.25; maxY = mid + 5.25; }
+    worldBounds = { minX: minX - padX, maxX: maxX + padX, minY: minY - padY, maxY: maxY + padY };
+
+    const legend = $('legend'); legend.innerHTML = '';
+    const bucketsPresent = [...new Set(parsed.entities.map(e => e.bucket))];
+    ['car', 'truck', 'pedestrian', 'bike', 'misc'].filter(b => bucketsPresent.includes(b)).forEach(b => {
+      legend.appendChild(h('span', { class: 'legend-item' },
+        h('span', { class: 'legend-swatch', style: `background:${CATEGORY_COLORS[b]}` }),
+        CATEGORY_LABELS[b]));
+    });
+
+    const scrub = $('scrub');
+    scrub.max = String(frames.length - 1);
+    scrub.value = '0';
+    currentIndex = 0;
+    playing = false;
+    updatePlayIcon();
+    resizeCanvas();
+    drawAtIndex(0);
+    updateTimeReadout(0);
+  }
+
+  $('scrub').addEventListener('input', () => {
+    playing = false;
+    updatePlayIcon();
+    const idx = Number($('scrub').value);
+    currentIndex = idx;
+    drawAtIndex(idx);
+    updateTimeReadout(idx);
+  });
+
+  $('speedSelect').addEventListener('change', () => {
+    speedMul = Number($('speedSelect').value) || 1;
+    if (playing) { playStartSimTime = currentIndex * dtUsed; playStartWall = performance.now(); }
+  });
+
+  $('playBtn').addEventListener('click', () => {
+    if (!frames.length) return;
+    if (playing) { playing = false; updatePlayIcon(); return; }
+    if (currentIndex >= frames.length - 1) currentIndex = 0;
+    playing = true;
+    updatePlayIcon();
+    playStartSimTime = currentIndex * dtUsed;
+    playStartWall = performance.now();
+    requestAnimationFrame(tick);
+  });
+
+  function updatePlayIcon() {
+    $('playBtn').setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    $('playIcon').innerHTML = playing
+      ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
+      : '<path d="M6 4l14 8-14 8V4z"></path>';
+  }
+
+  function tick(now) {
+    if (!playing) return;
+    const elapsed = (now - playStartWall) / 1000 * speedMul;
+    let simTime = playStartSimTime + elapsed;
+    const maxTime = (frames.length - 1) * dtUsed;
+    if (simTime >= maxTime) {
+      simTime = maxTime;
+      playing = false;
+      updatePlayIcon();
+    }
+    const idx = Math.min(frames.length - 1, Math.round(simTime / dtUsed));
+    currentIndex = idx;
+    $('scrub').value = String(idx);
+    try {
+      drawAtIndex(idx);
+    } catch (e) {
+      console.error('Playback draw failed at frame', idx, e);
+      playing = false;
+      updatePlayIcon();
+      toast('Playback stopped — a drawing error occurred (see console).', 'error');
+      return;
+    }
+    updateTimeReadout(idx);
+    if (playing) requestAnimationFrame(tick);
+  }
+
+  function updateTimeReadout(idx) {
+    const t = idx * dtUsed;
+    const total = (frames.length - 1) * dtUsed;
+    $('timeReadout').textContent = `${t.toFixed(2)}s / ${total.toFixed(2)}s`;
+  }
+
+  function resizeCanvas() {
+    const canvas = $('canvas');
+    if (!canvas || canvas.offsetParent === null) return;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const cssWidth = Math.max(280, Math.round(rect.width));
+    const cssHeight = 300;
+    canvas.style.width = cssWidth + 'px';
+    canvas.style.height = cssHeight + 'px';
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', () => {
+    if ($('panelPlayback').classList.contains('active')) { resizeCanvas(); drawAtIndex(currentIndex); }
+  });
+
+  function computeTransform(w, h) {
+    const rangeX = (worldBounds.maxX - worldBounds.minX) || 1;
+    const rangeY = (worldBounds.maxY - worldBounds.minY) || 1;
+    const scale = Math.min(w / rangeX, h / rangeY);
+    return { scale, offX: (w - rangeX * scale) / 2, offY: (h - rangeY * scale) / 2 };
+  }
+
+  function worldToCanvas(x, y, t) {
+    const cx = t.offX + (x - worldBounds.minX) * t.scale;
+    const cy = t.offY + (worldBounds.maxY - y) * t.scale;
+    return [cx, cy];
+  }
+
+  function drawAtIndex(idx) {
+    const canvas = $('canvas');
+    if (!canvas || !frames.length) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.clientWidth, hh = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, hh);
+    ctx.fillStyle = '#eceae3';
+    ctx.fillRect(0, 0, w, hh);
+
+    const t = computeTransform(w, hh);
+
+    if (roadsInUse.length) {
+      roadsInUse.forEach(road => drawCurvedRoad(ctx, road, t));
+    } else {
+      drawSchematicRoad(ctx, w, hh, t);
+    }
+
+    const frame = frames[idx];
+    frame.global_ground_truth.moving_object.forEach(o => {
+      const entity = parsed.entities.find(e => e.id === o.id) || { bucket: 'misc' };
+      const color = CATEGORY_COLORS[entity.bucket] || CATEGORY_COLORS.misc;
+      const [cx, cy] = worldToCanvas(o.base.x_m, o.base.y_m, t);
+      const boxW = Math.max(14, o.dimension_m.length * t.scale);
+      const boxH = Math.max(9, Math.min(22, o.dimension_m.width * t.scale * 1.6));
+
+      ctx.fillStyle = color;
+      ctx.strokeStyle = 'rgba(11,11,11,0.35)';
+      ctx.lineWidth = 1;
+
+      if (entity.bucket === 'pedestrian') {
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(6, boxH / 2), 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      } else {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-o.base.yaw_rad);
+        const rx = Math.min(5, boxH / 2);
+        roundRect(ctx, -boxW / 2, -boxH / 2, boxW, boxH, rx);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.fillStyle = '#0b0b0b';
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(o.name, cx, cy - boxH / 2 - 5);
+    });
+  }
+
+  function drawSchematicRoad(ctx, w, hh, t) {
+    const laneWidth = 3.5;
+    const firstLane = Math.floor(worldBounds.minY / laneWidth - 0.5) - 1;
+    const lastLane = Math.ceil(worldBounds.maxY / laneWidth + 0.5) + 1;
+    ctx.lineWidth = 1;
+    for (let k = firstLane; k <= lastLane; k++) {
+      const yWorld = (k + 0.5) * laneWidth;
+      if (yWorld < worldBounds.minY || yWorld > worldBounds.maxY) continue;
+      const [, cy] = worldToCanvas(0, yWorld, t);
+      ctx.strokeStyle = '#c3c2b7';
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+    }
+    if (0 >= worldBounds.minY && 0 <= worldBounds.maxY) {
+      const [, cy0] = worldToCanvas(0, 0, t);
+      ctx.strokeStyle = '#b3720a';
+      ctx.setLineDash([2, 6]);
+      ctx.beginPath(); ctx.moveTo(0, cy0); ctx.lineTo(w, cy0); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  function drawCurvedRoad(ctx, road, t) {
+    const samples = roadSamples(road);
+    if (samples.length < 2) return;
+    const edgePoints = idxFn => samples.map(s => {
+      const b = idxFn(s.boundaries);
+      const px = s.ref.x - b * Math.sin(s.ref.hdg);
+      const py = s.ref.y + b * Math.cos(s.ref.hdg);
+      return worldToCanvas(px, py, t);
+    });
+    const outerMin = edgePoints(bs => bs[0]);
+    const outerMax = edgePoints(bs => bs[bs.length - 1]);
+
+    // Paved surface as a filled ribbon between the two outer edges.
+    ctx.fillStyle = '#e2e0d8';
+    ctx.beginPath();
+    ctx.moveTo(outerMin[0][0], outerMin[0][1]);
+    outerMin.forEach(p => ctx.lineTo(p[0], p[1]));
+    for (let i = outerMax.length - 1; i >= 0; i--) ctx.lineTo(outerMax[i][0], outerMax[i][1]);
+    ctx.closePath();
+    ctx.fill();
+
+    // Interior lane boundaries (dashed) + outer edges (solid).
+    const boundaryCount = Math.max(...samples.map(s => s.boundaries.length));
+    for (let bi = 0; bi < boundaryCount; bi++) {
+      const pts = samples.filter(s => s.boundaries[bi] !== undefined).map(s => {
+        const b = s.boundaries[bi];
+        const px = s.ref.x - b * Math.sin(s.ref.hdg);
+        const py = s.ref.y + b * Math.cos(s.ref.hdg);
+        return worldToCanvas(px, py, t);
+      });
+      if (pts.length < 2) continue;
+      const isOuter = bi === 0 || bi === boundaryCount - 1;
+      ctx.strokeStyle = isOuter ? '#8b8a83' : '#c3c2b7';
+      ctx.lineWidth = isOuter ? 1.5 : 1;
+      ctx.setLineDash(isOuter ? [] : [7, 7]);
+      ctx.beginPath();
+      pts.forEach((p, i) => i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Reference line (centerline, t = 0).
+    ctx.strokeStyle = '#b3720a';
+    ctx.setLineDash([2, 6]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    samples.forEach((s, i) => {
+      const [cx, cy] = worldToCanvas(s.ref.x, s.ref.y, t);
+      i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+})();
+</script>
+</body>
+</html>

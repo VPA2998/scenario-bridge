@@ -23,8 +23,8 @@ No install, no build step:
 3. Load a `.xosc` file, optionally load a matching `.xodr`, set a duration
    and sampling rate, and click **Generate frames**.
 
-Or try it live once GitHub Pages is enabled for this repo — see
-[Hosting a live demo](#hosting-a-live-demo) below.
+Or [try the live demo](https://vpa2998.github.io/scenario-bridge/) — no
+download needed.
 
 ## What it does
 
@@ -90,17 +90,17 @@ npm test
 CI (`.github/workflows/ci.yml`) runs the same suite on every push and pull
 request against `main`.
 
-## Hosting a live demo
+Manual testing and the screenshots in this README use sample scenarios from
+[esmini](https://github.com/esmini/esmini)'s example resources
+(`acc-test.xosc`, `straight_500m_signs.xodr`, and others).
 
-Because `index.html` sits at the repo root with no build step, GitHub Pages
-can serve it directly:
+## Live demo
 
-1. Push this repo to GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**, branch
-   `main`, folder `/ (root)`.
-4. Your demo will be live at `https://<your-username>.github.io/scenario-bridge/`
-   within a minute or two.
+Live at **[vpa2998.github.io/scenario-bridge](https://vpa2998.github.io/scenario-bridge/)**,
+served straight from `index.html` at the repo root via GitHub Pages —
+no build step. Forking this repo and enabling Pages (**Settings → Pages** →
+deploy from branch `main`, folder `/ (root)`) gets you the same at
+`https://<your-username>.github.io/scenario-bridge/`.
 
 ## Project layout
 
